@@ -1,0 +1,9 @@
+<resources>
+    <string-array name="categories">
+        <item>Sport</item>
+        <item>Politique</item>
+        <item>Art</item>
+        <item>Technologie</item>
+    </string-array>
+        <string name="app_name">Nom de votre application</string>
+</resources>
