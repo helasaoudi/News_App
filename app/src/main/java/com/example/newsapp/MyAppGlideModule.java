@@ -7,7 +7,7 @@ import com.bumptech.glide.module.AppGlideModule;
 public class MyAppGlideModule extends AppGlideModule {
     @Override
     public boolean isManifestParsingEnabled() {
-        return false; // Désactiver la recherche dans le manifeste, si nécessaire
+        return false;
     }
 }
 

@@ -1,24 +1,23 @@
 package com.example.newsapp;
 
-import android.content.Intent;
+import android.content.Context;
+import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.Spinner;
+import android.widget.TextView;
 import androidx.appcompat.widget.Toolbar;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -30,9 +29,8 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private Adapter newsAdapter;
     private List<Article> articleList;
-    private Retrofit retrofit;
-
-    private Map<String, List<String>> categoryKeywords = new HashMap<>();
+    private List<String> categories;
+    private ApiService apiService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,47 +38,42 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         recyclerView = findViewById(R.id.recyclerView);
-        LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
-        recyclerView.setLayoutManager(layoutManager);
-
+        recyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
         articleList = new ArrayList<>();
 
-        setupCategoryKeywords();
+        categories = new ArrayList<>();
+        categories.add("Business");
+        categories.add("Entertainment");
+        categories.add("General");
+        categories.add("Health");
+        categories.add("Science");
+        categories.add("Sports");
+        categories.add("Technology");
+        Retrofit retrofit = ApiClient.getClient();
+        apiService = retrofit.create(ApiService.class);
 
-        retrofit = ApiClient.getClient();
-        ApiService apiService = retrofit.create(ApiService.class);
+        setupSpinner();
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
+        getSupportActionBar().setTitle("Actualités");
+    }
 
-        apiService.getTopHeadlines("us", "general", "a76f3be0acc44130aea600b277037630").enqueue(new Callback<NewsResponse>() {
-            @Override
-            public void onResponse(Call<NewsResponse> call, Response<NewsResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    List<Article> articles = response.body().getArticles();
-                    articleList.addAll(articles);
-                    newsAdapter = new Adapter(MainActivity.this, articleList);
-                    recyclerView.setAdapter(newsAdapter);
-                } else {
-                    Log.e("NewsApp", "Response unsuccessful or empty");
-                }
-            }
-
-            @Override
-            public void onFailure(Call<NewsResponse> call, Throwable t) {
-                Log.e("NewsApp", "Error fetching news", t);
-            }
-        });
-
+    private void setupSpinner() {
         Spinner categorySpinner = findViewById(R.id.categorySpinner);
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
-                R.array.categories, android.R.layout.simple_spinner_item);
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, categories);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
         categorySpinner.setAdapter(adapter);
 
         categorySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
                 String selectedCategory = parentView.getItemAtPosition(position).toString();
-                filterArticlesByCategory(selectedCategory);
+                fetchNewsByCategory(selectedCategory);
             }
 
             @Override
@@ -89,37 +82,55 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-       private void setupCategoryKeywords() {
-        List<String> sportKeywords = Arrays.asList("football", "basketball", "sport", "match");
-        List<String> politiqueKeywords = Arrays.asList("élection", "gouvernement", "loi", "politique");
-        List<String> artKeywords = Arrays.asList("exposition", "art", "peinture");
+    private void fetchNewsByCategory(String category) {
+        if (isNetworkAvailable()) {
+            apiService.getTopHeadlines("us", category, "a76f3be0acc44130aea600b277037630")
+                    .enqueue(new Callback<NewsResponse>() {
+                        @Override
+                        public void onResponse(Call<NewsResponse> call, Response<NewsResponse> response) {
+                            if (response.isSuccessful() && response.body() != null) {
+                                List<Article> articles = response.body().getArticles();
 
-        categoryKeywords.put("sport", sportKeywords);
-        categoryKeywords.put("politique", politiqueKeywords);
-        categoryKeywords.put("art", artKeywords);
+                                List<Article> articlesWithImageAndDescription = new ArrayList<>();
+                                List<Article> otherArticles = new ArrayList<>();
+
+                                for (Article article : articles) {
+                                    if (article.getUrlToImage() != null && article.getDescription() != null) {
+                                        articlesWithImageAndDescription.add(article);
+                                    } else {
+                                        otherArticles.add(article);
+                                    }
+                                }
+
+                                articlesWithImageAndDescription.addAll(otherArticles);
+
+                                articleList.clear();
+                                articleList.addAll(articlesWithImageAndDescription);
+
+                                if (newsAdapter == null) {
+                                    newsAdapter = new Adapter(MainActivity.this, articleList);
+                                    recyclerView.setAdapter(newsAdapter);
+                                } else {
+                                    newsAdapter.notifyDataSetChanged();
+                                }
+                            } else {
+                                Log.e("NewsApp", "Error in response: " + response.code());
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(Call<NewsResponse> call, Throwable t) {
+                            Log.e("NewsApp", "Error fetching news", t);
+                        }
+                    });
+        } else {
+            Log.e("NewsApp", "No internet connection");
+        }
     }
 
-    private void filterArticlesByCategory(String category) {
-        List<String> keywords = categoryKeywords.get(category.toLowerCase());
-
-        if (keywords != null && !keywords.isEmpty()) {
-            List<Article> filteredArticles = new ArrayList<>();
-
-            for (Article article : articleList) {
-                for (String keyword : keywords) {
-                    if (article.getTitle().toLowerCase().contains(keyword) ||
-                            article.getDescription().toLowerCase().contains(keyword)) {
-                        filteredArticles.add(article);
-                        break;
-                    }
-                }
-            }
-
-            if (newsAdapter != null) {
-               // newsAdapter.updateArticles(filteredArticles);
-            } else {
-                Log.e("NewsApp", "Adapter is not initialized");
-            }
-        }
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        return connectivityManager != null && connectivityManager.getActiveNetworkInfo() != null &&
+                connectivityManager.getActiveNetworkInfo().isConnected();
     }
 }

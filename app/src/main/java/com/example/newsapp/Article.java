@@ -23,7 +23,6 @@ public class Article implements Serializable {
 
     }
 
-    // Getters
     public String getTitle() {
         return title;
     }

@@ -49,7 +49,6 @@ public class Adapter extends RecyclerView.Adapter<Adapter.NewsViewHolder> {
         holder.description.setText(newsItem.getDescription());
         holder.author.setText(newsItem.getAuthor());
 
-        // Ajout de l'écouteur de clic pour rediriger vers la page de détails
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, NewsDetailActivity.class);
             intent.putExtra("article", newsItem); // Passer l'article à l'activité

@@ -5,5 +5,5 @@
         <item>Art</item>
         <item>Technologie</item>
     </string-array>
-        <string name="app_name">Nom de votre application</string>
+    <string name="app_name">Nom de votre application</string>
 </resources>

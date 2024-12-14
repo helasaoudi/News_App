@@ -37,10 +37,12 @@
             android:orientation="horizontal"
             android:paddingEnd="16dp">
 
+            <!-- Spinner avec icône de filtre -->
             <Spinner
                 android:id="@+id/categorySpinner"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
+
         </LinearLayout>
 
     </androidx.appcompat.widget.Toolbar>

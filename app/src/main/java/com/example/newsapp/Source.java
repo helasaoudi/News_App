@@ -7,8 +7,8 @@ import java.io.Serializable;
 public class Source implements Serializable {
     private String id;
     private String name;
+    private String category;
 
-    // Getters et setters
 
     protected Source(Parcel in) {
         id = in.readString();
@@ -18,6 +18,14 @@ public class Source implements Serializable {
 
     public String getName() {
         return name;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 
     public void setName(String name) {
